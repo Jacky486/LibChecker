@@ -26,6 +26,8 @@ jobs:
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/settings/SettingsFragment.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/main/MainActivity.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/viewmodel/AppViewModel.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
       - name: Build with Gradle
         run: |
           bash ./gradlew -PappVerName=${{ env.VERSION }} assembleRelease
