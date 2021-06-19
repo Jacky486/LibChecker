@@ -13,6 +13,9 @@ jobs:
       - name: Retrieve version
         run: |
           echo VERSION=$(echo ${{ github.event.head_commit.id }} | head -c 10) >> $GITHUB_ENV
+      - name: prebuilt
+        run: |
+          sed -i -e 'appcenter/d' app/build.gradle.kts
       - name: Build with Gradle
         run: |
           bash ./gradlew -PappVerName=${{ env.VERSION }} assembleRelease
