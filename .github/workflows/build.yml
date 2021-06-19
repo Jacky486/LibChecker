@@ -16,6 +16,14 @@ jobs:
       - name: prebuilt
         run: |
           sed -i -e '/appcenter/d' app/build.gradle.kts
+          sed -i -e '/microsoft/d; /AppCenter/d; /Analytics/d; /Crashes/d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/about/AboutActivity.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/detail/SnapshotDetailActivity.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/applist/AppListFragment.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/settings/LibThresholdDialogFragment.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/settings/SettingsFragment.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
+          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/main/MainActivity.kt
       - name: Build with Gradle
         run: |
           bash ./gradlew -PappVerName=${{ env.VERSION }} assembleRelease
