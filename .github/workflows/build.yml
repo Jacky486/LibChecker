@@ -16,6 +16,7 @@ jobs:
       - name: prebuilt
         run: |
           sed -i -e '/appcenter/d' app/build.gradle.kts
+          sed -i -e '/Analytics.trackEvent(Constants/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
           sed -i -e '/isAnonymousAnalyticsEnabled/,+5d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
           sed -i -e '/Analytics.trackEvent/,+3d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
           sed -i -e '/Analytics.trackEvent/,+5d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
