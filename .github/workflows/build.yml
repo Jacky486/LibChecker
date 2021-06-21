@@ -16,10 +16,9 @@ jobs:
       - name: prebuilt
         run: |
           sed -i -e '/appcenter/d' app/build.gradle.kts
-          sed -i -e '35,40d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
-          sed -i -e '186,189d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
-          sed -i -e '162,165d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
-          sed -i -e '200,205d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
+          sed -i -e '/isAnonymousAnalyticsEnabled/,+5d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
+          sed -i -e '/Analytics.trackEvent/,+3d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
+          sed -i -e '/Analytics.trackEvent/,+5d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
           sed -i -e '/microsoft/d; /AppCenter/d; /Analytics/d; /Crashes/d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/about/AboutActivity.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/detail/SnapshotDetailActivity.kt
