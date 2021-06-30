@@ -129,6 +129,7 @@ val protocVersion by extra("3.17.0")
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    compileOnly(fileTree("ohos"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0")
 
     implementation("com.github.zhaobozhen.libraries:me:1.0.1")
@@ -151,7 +152,7 @@ dependencies {
     val roomVersion = "2.3.0"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("org.xerial:sqlite-jdbc:3.34.0") //Work around on Apple Silicon
+    kapt("org.xerial:sqlite-jdbc:3.36.0") //Work around on Apple Silicon
     kapt("androidx.room:room-compiler:$roomVersion")
 
     implementation("androidx.constraintlayout:constraintlayout:2.0.4")
