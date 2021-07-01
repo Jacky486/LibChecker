@@ -29,7 +29,7 @@ jobs:
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/main/MainActivity.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
-          sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/viewmodel/HomeViewModel.kt
+          sed -i -e '/microsoft/d; /Analytics.trackEvent/d' app/src/main/kotlin/com/absinthe/libchecker/viewmodel/HomeViewModel.kt
       - name: Build with Gradle
         run: |
           bash ./gradlew -PappVerName=${{ env.VERSION }} assembleRelease
