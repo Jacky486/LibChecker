@@ -18,13 +18,14 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.annotation.STATUS_END
 import com.absinthe.libchecker.annotation.STATUS_NOT_START
-import com.absinthe.libchecker.annotation.STATUS_START
+import com.absinthe.libchecker.annotation.STATUS_START_INIT
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.constant.OnceTag
 import com.absinthe.libchecker.database.AppItemRepository
 import com.absinthe.libchecker.database.entity.LCItem
 import com.absinthe.libchecker.databinding.FragmentAppListBinding
+import com.absinthe.libchecker.extensions.addPaddingTop
 import com.absinthe.libchecker.extensions.tintHighlightText
 import com.absinthe.libchecker.extensions.valueUnsafe
 import com.absinthe.libchecker.recyclerview.adapter.AppAdapter
@@ -37,23 +38,23 @@ import com.absinthe.libchecker.utils.SPUtils
 import com.absinthe.libchecker.utils.Toasty
 import com.absinthe.libchecker.utils.doOnMainThreadIdle
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
+import com.absinthe.libraries.utils.utils.UiUtils
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.analytics.EventProperties
 import jonathanfinerty.once.Once
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import rikka.widget.borderview.BorderView
+import timber.log.Timber
 
-
-const val VF_LIST = 0
-const val VF_INIT = 1
-const val VF_LOADING = 2
+const val VF_LOADING = 0
+const val VF_LIST = 1
+const val VF_INIT = 2
 
 class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.layout.fragment_app_list), SearchView.OnQueryTextListener {
 
     private val mAdapter by lazy { AppAdapter(lifecycleScope) }
     private var isFirstLaunch = !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.FIRST_LAUNCH)
     private var popup: PopupMenu? = null
-    private var hasScrolledList = false
 
     private lateinit var layoutManager: RecyclerView.LayoutManager
 
@@ -90,13 +91,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
                     }
                 setHasFixedSize(true)
                 FastScrollerBuilder(this).useMd2Style().build()
-                addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                        super.onScrolled(recyclerView, dx, dy)
-                        hasScrolledList = true
-                        removeOnScrollListener(this)
-                    }
-                })
+                addPaddingTop(UiUtils.getStatusBarHeight())
             }
             vfContainer.apply {
                 setInAnimation(activity, R.anim.anim_fade_in)
@@ -196,13 +191,19 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
                 }
             })
 
-            if (newText.equals("Easter Egg", true)) {
-                Toasty.show(requireContext(), "🥚")
-                Analytics.trackEvent(Constants.Event.EASTER_EGG, EventProperties().set("EASTER_EGG", "AppList Search"))
-            }
-            if (newText == Constants.COMMAND_DEBUG_MODE) {
-                GlobalValues.debugMode = true
-                Toasty.show(requireActivity(), "DEBUG MODE")
+            when {
+                newText.equals("Easter Egg", true) -> {
+                    Toasty.show(requireContext(), "🥚")
+                    Analytics.trackEvent(Constants.Event.EASTER_EGG, EventProperties().set("EASTER_EGG", "AppList Search"))
+                }
+                newText == Constants.COMMAND_DEBUG_MODE -> {
+                    GlobalValues.debugMode = true
+                    Toasty.show(requireActivity(), "DEBUG MODE")
+                }
+                newText == Constants.COMMAND_DEBUG_MODE -> {
+                    GlobalValues.debugMode = false
+                    Toasty.show(requireActivity(), "USER MODE")
+                }
             }
         }
         return false
@@ -256,17 +257,17 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
             })
 
             dbItems.observe(viewLifecycleOwner, {
-                if (it.isNullOrEmpty() || appListStatusLiveData.value == STATUS_START) {
+                if (it.isNullOrEmpty() || appListStatusLiveData.value == STATUS_START_INIT) {
                     return@observe
                 }
                 updateItems(it)
                 homeViewModel.requestChange()
             })
             appListStatusLiveData.observe(viewLifecycleOwner, { status ->
+                Timber.d("appListStatusLiveData update to $status")
                 if (status == STATUS_END) {
                     dbItems.value?.let { updateItems(it) }
                     if (!homeViewModel.hasRequestedChange) {
-                        flip(VF_LOADING)
                         homeViewModel.requestChange()
                         homeViewModel.hasRequestedChange = true
                     }
@@ -324,6 +325,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
     }
 
     private fun updateItems(newItems: List<LCItem>) {
+        Timber.d("updateItems")
         val filterList = mutableListOf<LCItem>()
 
         GlobalValues.isShowSystemApps.value?.let { isShowSystem ->
@@ -340,9 +342,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
             Constants.SORT_MODE_TARGET_API_DESC -> filterList.sortByDescending { it.targetApi }
         }
 
-        mAdapter.setDiffNewData(filterList)
-
-        doOnMainThreadIdle({
+        mAdapter.setDiffNewData(filterList) {
             flip(VF_LIST)
 
             if (shouReturnTopOfList()) {
@@ -351,12 +351,12 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
 
             menu?.findItem(R.id.search)?.isVisible = true
             isListReady = true
-        })
+        }
     }
 
     private fun shouReturnTopOfList(): Boolean {
         return binding.list.canScrollVertically(-1) &&
-                (GlobalValues.appSortMode.valueUnsafe == Constants.SORT_MODE_UPDATE_TIME_DESC || !hasScrolledList) &&
+                (GlobalValues.appSortMode.valueUnsafe == Constants.SORT_MODE_UPDATE_TIME_DESC) &&
                 binding.list.scrollState != RecyclerView.SCROLL_STATE_DRAGGING
     }
 
@@ -378,7 +378,9 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
     }
 
     private fun flip(page: Int) {
-        if (homeViewModel.appListStatusLiveData.value == STATUS_START) {
+        Timber.d("flip to $page")
+        if (homeViewModel.appListStatusLiveData.value == STATUS_START_INIT) {
+            Timber.d("flip encounters STATUS_START_INIT")
             return
         }
         if (binding.vfContainer.displayedChild != page) {

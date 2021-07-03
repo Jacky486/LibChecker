@@ -32,8 +32,6 @@ import com.absinthe.libchecker.constant.Constants.X86_64_STRING
 import com.absinthe.libchecker.constant.Constants.X86_STRING
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.constant.librarymap.DexLibMap
-import com.absinthe.libchecker.exception.MiuiOpsException
-import com.absinthe.libraries.utils.utils.XiaomiUtilities
 import net.dongliu.apk.parser.ApkFile
 import timber.log.Timber
 import java.io.BufferedReader
@@ -89,10 +87,6 @@ object PackageUtils {
      */
     @Throws(Exception::class)
     fun getInstallApplications(): List<ApplicationInfo> {
-        if (!XiaomiUtilities.isCustomPermissionGranted(XiaomiUtilities.OP_GET_INSTALLED_APPS)) {
-            throw MiuiOpsException("miui: not permitted OP_GET_INSTALLED_APPS")
-        }
-
         return SystemServices.packageManager.getInstalledApplications(VersionCompat.MATCH_UNINSTALLED_PACKAGES)
     }
 
@@ -652,12 +646,13 @@ object PackageUtils {
     )
 
     private val ABI_BADGE_MAP = mapOf(
+        NO_LIBS to if (Build.SUPPORTED_64_BIT_ABIS.isEmpty()) { R.drawable.ic_abi_label_32bit } else { R.drawable.ic_abi_label_64bit },
+        ERROR to 0,
         ARMV8 to R.drawable.ic_abi_label_64bit,
         X86_64 to R.drawable.ic_abi_label_64bit,
         ARMV7 to R.drawable.ic_abi_label_32bit,
         ARMV5 to R.drawable.ic_abi_label_32bit,
         X86 to R.drawable.ic_abi_label_32bit,
-        ERROR to R.drawable.ic_abi_label_no_libs,
         OVERLAY to R.drawable.ic_abi_label_no_libs,
         ARMV8 + MULTI_ARCH to R.drawable.ic_abi_label_64bit,
         X86_64 + MULTI_ARCH to R.drawable.ic_abi_label_64bit,
@@ -692,10 +687,7 @@ object PackageUtils {
      */
     @DrawableRes
     fun getAbiBadgeResource(type: Int): Int {
-        return ABI_BADGE_MAP[type] ?: if (Build.SUPPORTED_64_BIT_ABIS.isEmpty())
-            R.drawable.ic_abi_label_32bit
-        else
-            R.drawable.ic_abi_label_64bit
+        return ABI_BADGE_MAP[type] ?: 0
     }
 
     /**
@@ -704,7 +696,7 @@ object PackageUtils {
      * @return String of size number (100KB)
      */
     fun sizeToString(context: Context, item: LibStringItem): String {
-        val source = item.source?.let { ", ${item.source}" } ?: ""
+        val source = item.source?.let { ", ${item.source}" }.orEmpty()
         return "(${Formatter.formatFileSize(context, item.size)}$source)"
     }
 

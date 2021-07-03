@@ -23,7 +23,6 @@ import com.absinthe.libchecker.database.AppItemRepository
 import com.absinthe.libchecker.database.Repositories
 import com.absinthe.libchecker.database.entity.LCItem
 import com.absinthe.libchecker.database.entity.RuleEntity
-import com.absinthe.libchecker.exception.MiuiOpsException
 import com.absinthe.libchecker.extensions.valueUnsafe
 import com.absinthe.libchecker.ui.fragment.IListController
 import com.absinthe.libchecker.utils.LCAppUtils
@@ -34,6 +33,9 @@ import com.microsoft.appcenter.analytics.Analytics
 import jonathanfinerty.once.Once
 import kotlinx.coroutines.*
 import timber.log.Timber
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 const val GET_INSTALL_APPS_RETRY_PERIOD = 200L
@@ -50,6 +52,51 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     var hasRequestedChange = false
     var controller: IListController? = null
 
+    suspend fun getAppsList(): List<ApplicationInfo> {
+        var appList: List<ApplicationInfo>?
+
+        do {
+            appList = try {
+                PackageUtils.getInstallApplications()
+            } catch (e: Exception) {
+                Timber.w(e)
+                delay(GET_INSTALL_APPS_RETRY_PERIOD)
+                null
+            }?.apply {
+                AppItemRepository.allApplicationInfoItems.postValue(this)
+            }
+        } while (appList == null)
+
+        val pmList = mutableListOf<String>()
+        try {
+            val process = Runtime.getRuntime().exec("pm list packages")
+            InputStreamReader(process.inputStream, StandardCharsets.UTF_8).use { isr ->
+                BufferedReader(isr).use { br ->
+                    br.forEachLine { line ->
+                        line.trim().let { trimLine ->
+                            if (trimLine.length > 8 && trimLine.startsWith("package:")) {
+                                trimLine.substring(8).let {
+                                    if (it.isNotEmpty()) {
+                                        pmList.add(it)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (pmList.size > appList.size) {
+                appList = pmList.asSequence()
+                    .map { PackageUtils.getPackageInfo(it).applicationInfo }
+                    .toList()
+            }
+        } catch (t: Throwable) {
+            Timber.w(t)
+            appList = emptyList()
+        }
+        return appList!!
+    }
+
     fun initItems() = viewModelScope.launch(Dispatchers.IO) {
         Timber.d("initItems: START")
 
@@ -57,27 +104,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val timeRecorder = TimeRecorder()
         timeRecorder.start()
 
-        appListStatusLiveData.postValue(STATUS_START)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_START_INIT
+        }
         Repositories.lcRepository.deleteAllItems()
         initProgressLiveData.postValue(0)
 
-        var appList: List<ApplicationInfo>?
-        var appNumbers = 0
-
-        do {
-            appList = try {
-                PackageUtils.getInstallApplications()
-            } catch (e: MiuiOpsException) {
-                emptyList()
-            } catch (e: Exception) {
-                Timber.w(e)
-                delay(GET_INSTALL_APPS_RETRY_PERIOD)
-                null
-            }?.apply {
-                AppItemRepository.allApplicationInfoItems.postValue(this)
-                appNumbers = this.size
-            }
-        } while (appList == null)
+        val appList = getAppsList()
 
         val lcItems = mutableListOf<LCItem>()
         var packageInfo: PackageInfo
@@ -101,7 +134,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 lcItem = LCItem(
                     info.packageName,
                     info.loadLabel(context.packageManager).toString(),
-                    packageInfo.versionName ?: "",
+                    packageInfo.versionName.orEmpty(),
                     versionCode,
                     packageInfo.firstInstallTime,
                     packageInfo.lastUpdateTime,
@@ -115,7 +148,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 lcItems.add(lcItem)
                 count++
                 progressCount++
-                initProgressLiveData.postValue(progressCount * 100 / appNumbers)
+                initProgressLiveData.postValue(progressCount * 100 / appList.size)
             } catch (e: Throwable) {
                 Timber.e(e, "initItems")
                 continue
@@ -130,15 +163,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         insert(lcItems)
         lcItems.clear()
-        appListStatusLiveData.postValue(STATUS_END)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_END
+        }
 
         timeRecorder.end()
         Timber.d("initItems: END, $timeRecorder")
-        appListStatusLiveData.postValue(STATUS_NOT_START)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_NOT_START
+        }
     }
 
     fun requestChange(needRefresh: Boolean = false) = viewModelScope.launch(Dispatchers.IO) {
-        if (appListStatusLiveData.value == STATUS_START) {
+        if (appListStatusLiveData.value == STATUS_START_REQUEST_CHANGE || appListStatusLiveData.value == STATUS_START_INIT) {
             Timber.d("Request change appListStatusLiveData not equals STATUS_START")
             return@launch
         }
@@ -156,20 +193,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         var appList: MutableList<ApplicationInfo>? = AppItemRepository.allApplicationInfoItems.value?.toMutableList()
 
         timeRecorder.start()
-        appListStatusLiveData.postValue(STATUS_START)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_START_REQUEST_CHANGE
+        }
 
         if (appList.isNullOrEmpty() || needRefresh) {
-            do {
-                appList = try {
-                    PackageUtils.getInstallApplications().toMutableList()
-                } catch (e: MiuiOpsException) {
-                    mutableListOf()
-                } catch (e: Exception) {
-                    Timber.w(e)
-                    delay(GET_INSTALL_APPS_RETRY_PERIOD)
-                    null
-                }
-            } while (appList == null)
+            appList = getAppsList().toMutableList()
         }
 
         dbItems.value?.let { value ->
@@ -258,10 +287,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             GlobalValues.shouldRequestChange.postValue(true)
         }
 
-        appListStatusLiveData.postValue(STATUS_END)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_END
+        }
         timeRecorder.end()
         Timber.d("Request change: END, $timeRecorder")
-        appListStatusLiveData.postValue(STATUS_NOT_START)
+        withContext(Dispatchers.Main) {
+            appListStatusLiveData.value = STATUS_NOT_START
+        }
 
         if (!Once.beenDone(Once.THIS_APP_VERSION, OnceTag.HAS_COLLECT_LIB)) {
             delay(10000)
@@ -373,18 +406,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             var appList: List<ApplicationInfo>? = AppItemRepository.allApplicationInfoItems.value
 
             if (appList.isNullOrEmpty()) {
-                do {
-                    appList = try {
-                        PackageUtils.getInstallApplications()
-                    } catch (e: MiuiOpsException) {
-                        Timber.e(e)
-                        emptyList()
-                    } catch (e: Exception) {
-                        Timber.e(e)
-                        delay(GET_INSTALL_APPS_RETRY_PERIOD)
-                        null
-                    }
-                } while (appList == null)
+                appList = getAppsList()
             }
 
             val map = HashMap<String, RefCountType>()
