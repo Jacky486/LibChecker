@@ -15,14 +15,10 @@ import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.fragment.detail.LocatedCount
 import com.absinthe.libchecker.utils.LCAppUtils
 import com.absinthe.libchecker.utils.Toasty
-import com.absinthe.libchecker.view.detail.DexListEmptyView
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import rikka.core.util.ClipboardUtils
 
 class DexAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(R.layout.fragment_lib_component) {
-
-    private val packageName by lazy { arguments?.getString(EXTRA_PACKAGE_NAME).orEmpty() }
-    private val emptyView by lazy { DexListEmptyView(requireContext()) }
 
     override fun initBinding(view: View): FragmentLibComponentBinding = FragmentLibComponentBinding.bind(view)
 
@@ -79,8 +75,6 @@ class DexAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(R.la
                 true
             }
             setDiffCallback(LibStringDiffUtil())
-
-            emptyView.text.text = getString(R.string.loading)
             setEmptyView(emptyView)
         }
         viewModel.initDexData(packageName)

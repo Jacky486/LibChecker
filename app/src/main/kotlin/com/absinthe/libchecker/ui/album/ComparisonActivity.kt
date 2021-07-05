@@ -6,8 +6,8 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.MenuItem
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,14 +16,15 @@ import com.absinthe.libchecker.BaseActivity
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.databinding.ActivityComparisonBinding
 import com.absinthe.libchecker.databinding.LayoutComparisonDashboardBinding
+import com.absinthe.libchecker.extensions.addPaddingTop
 import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.HorizontalSpacesItemDecoration
 import com.absinthe.libchecker.recyclerview.adapter.snapshot.SnapshotAdapter
 import com.absinthe.libchecker.ui.detail.EXTRA_ENTITY
 import com.absinthe.libchecker.ui.detail.SnapshotDetailActivity
+import com.absinthe.libchecker.ui.fragment.snapshot.TimeNodeBottomSheetDialogFragment
 import com.absinthe.libchecker.view.snapshot.SnapshotEmptyView
 import com.absinthe.libchecker.viewmodel.SnapshotViewModel
-import com.absinthe.libraries.utils.manager.SystemBarManager
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -72,18 +73,15 @@ class ComparisonActivity : BaseActivity() {
         val dashboardBinding = LayoutComparisonDashboardBinding.inflate(layoutInflater)
 
         dashboardBinding.apply {
-            infoLeft.root.gravity = Gravity.START
-            infoLeft.root.setOnClickListener {
+            infoLeft.horizontalGravity = Gravity.START
+            infoLeft.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
                     val timeStampList = viewModel.repository.getTimeStamps()
-                    val charList = mutableListOf<String>()
-                    timeStampList.forEach { charList.add(viewModel.getFormatDateString(it.timestamp)) }
-
                     withContext(Dispatchers.Main) {
-                        AlertDialog.Builder(this@ComparisonActivity)
-                            .setTitle(R.string.dialog_title_change_timestamp)
-                            .setItems(charList.toTypedArray()) { _, which ->
-                                leftTimeStamp = timeStampList[which].timestamp
+                        val dialog = TimeNodeBottomSheetDialogFragment.newInstance(ArrayList(timeStampList)).apply {
+                            setOnItemClickListener { position ->
+                                val item = timeStampList[position]
+                                leftTimeStamp = item.timestamp
                                 infoLeft.tvSnapshotTimestampText.text = viewModel.getFormatDateString(leftTimeStamp)
                                 lifecycleScope.launch(Dispatchers.IO) {
                                     val count = viewModel.repository.getSnapshots(leftTimeStamp).size
@@ -92,23 +90,22 @@ class ComparisonActivity : BaseActivity() {
                                         infoLeft.tvSnapshotAppsCountText.text = count.toString()
                                     }
                                 }
+                                dismiss()
                             }
-                            .show()
+                        }
+                        dialog.show(supportFragmentManager, dialog.tag)
                     }
                 }
             }
-            infoRight.root.gravity = Gravity.END
-            infoRight.root.setOnClickListener {
+            infoRight.horizontalGravity = Gravity.END
+            infoRight.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
                     val timeStampList = viewModel.repository.getTimeStamps()
-                    val charList = mutableListOf<String>()
-                    timeStampList.forEach { charList.add(viewModel.getFormatDateString(it.timestamp)) }
-
                     withContext(Dispatchers.Main) {
-                        AlertDialog.Builder(this@ComparisonActivity)
-                            .setTitle(R.string.dialog_title_change_timestamp)
-                            .setItems(charList.toTypedArray()) { _, which ->
-                                rightTimeStamp = timeStampList[which].timestamp
+                        val dialog = TimeNodeBottomSheetDialogFragment.newInstance(ArrayList(timeStampList)).apply {
+                            setOnItemClickListener { position ->
+                                val item = timeStampList[position]
+                                rightTimeStamp = item.timestamp
                                 infoRight.tvSnapshotTimestampText.text = viewModel.getFormatDateString(rightTimeStamp)
                                 lifecycleScope.launch(Dispatchers.IO) {
                                     val count = viewModel.repository.getSnapshots(rightTimeStamp).size
@@ -117,8 +114,10 @@ class ComparisonActivity : BaseActivity() {
                                         infoRight.tvSnapshotAppsCountText.text = count.toString()
                                     }
                                 }
+                                dismiss()
                             }
-                            .show()
+                        }
+                        dialog.show(supportFragmentManager, dialog.tag)
                     }
                 }
             }
@@ -128,7 +127,7 @@ class ComparisonActivity : BaseActivity() {
             extendedFab.apply {
                 post {
                     (layoutParams as ViewGroup.MarginLayoutParams).setMargins(
-                        0, 0, 16.dp, paddingBottom + SystemBarManager.navigationBarSize
+                        0, 0, 16.dp, paddingBottom + (window.decorView.rootWindowInsets?.systemWindowInsetBottom ?: 0)
                     )
                 }
                 setOnClickListener {
@@ -171,7 +170,13 @@ class ComparisonActivity : BaseActivity() {
 
         adapter.apply {
             headerWithEmptyEnable = true
-            setEmptyView(SnapshotEmptyView(this@ComparisonActivity))
+            val emptyView = SnapshotEmptyView(this@ComparisonActivity).apply {
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).also {
+                    it.gravity = Gravity.CENTER_HORIZONTAL
+                }
+                addPaddingTop(96.dp)
+            }
+            setEmptyView(emptyView)
             setHeaderView(dashboardBinding.root)
             setOnItemClickListener { _, view, position ->
                 if (AntiShakeUtils.isInvalidClick(view)) {
