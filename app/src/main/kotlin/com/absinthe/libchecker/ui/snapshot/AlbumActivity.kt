@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.*
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.absinthe.libchecker.BaseActivity
 import com.absinthe.libchecker.R
@@ -15,6 +14,7 @@ import com.absinthe.libchecker.extensions.getDimensionPixelSize
 import com.absinthe.libchecker.ui.album.BackupActivity
 import com.absinthe.libchecker.ui.album.ComparisonActivity
 import com.absinthe.libchecker.ui.album.TrackActivity
+import com.absinthe.libchecker.ui.fragment.snapshot.TimeNodeBottomSheetDialogFragment
 import com.absinthe.libchecker.view.snapshot.AlbumItemView
 import com.absinthe.libchecker.viewmodel.SnapshotViewModel
 import kotlinx.coroutines.Dispatchers
@@ -55,14 +55,12 @@ class AlbumActivity : BaseActivity() {
         }
         itemManagement.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                var timeStampList = viewModel.repository.getTimeStamps()
-                val charList = mutableListOf<String>()
-                timeStampList.forEach { charList.add(viewModel.getFormatDateString(it.timestamp)) }
-
+                val timeStampList = viewModel.repository.getTimeStamps().toMutableList()
                 withContext(Dispatchers.Main) {
-                    AlertDialog.Builder(this@AlbumActivity)
-                        .setTitle(R.string.dialog_title_select_to_delete)
-                        .setItems(charList.toTypedArray()) { _, which ->
+                    val dialog = TimeNodeBottomSheetDialogFragment.newInstance(ArrayList(timeStampList)).apply {
+                        setTitle(this@AlbumActivity.getString(R.string.dialog_title_select_to_delete))
+                        setOnItemClickListener { position ->
+                            val item = timeStampList[position]
                             lifecycleScope.launch(Dispatchers.IO) {
                                 val progressDialog: ProgressDialog
                                 withContext(Dispatchers.Main) {
@@ -72,20 +70,21 @@ class AlbumActivity : BaseActivity() {
                                     }
                                     progressDialog.show()
                                 }
-                                viewModel.repository.deleteSnapshotsAndTimeStamp(timeStampList[which].timestamp)
-                                timeStampList = viewModel.repository.getTimeStamps()
-                                charList.removeAt(which)
+                                viewModel.repository.deleteSnapshotsAndTimeStamp(item.timestamp)
+                                timeStampList.removeAt(position)
                                 GlobalValues.snapshotTimestamp = if (timeStampList.isEmpty()) {
                                     0L
                                 } else {
                                     timeStampList[0].timestamp
                                 }
                                 withContext(Dispatchers.Main) {
+                                    root.adapter.remove(item)
                                     progressDialog.dismiss()
                                 }
                             }
                         }
-                        .show()
+                    }
+                    dialog.show(supportFragmentManager, dialog.tag)
                 }
             }
         }

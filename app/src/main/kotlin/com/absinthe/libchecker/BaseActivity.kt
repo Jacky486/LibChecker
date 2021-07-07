@@ -2,10 +2,10 @@ package com.absinthe.libchecker
 
 import android.annotation.SuppressLint
 import android.content.res.Resources
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
-import com.absinthe.libchecker.extensions.setSystemPadding
-import com.absinthe.libraries.utils.utils.UiUtils.setSystemBarStyle
 import rikka.material.app.MaterialActivity
 
 @SuppressLint("Registered, MissingSuperCall")
@@ -15,14 +15,9 @@ abstract class BaseActivity : MaterialActivity() {
 
     protected abstract fun setViewBinding(): ViewGroup
 
-    protected fun setRootPadding() {
-        root?.setSystemPadding()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setViewBindingImpl(setViewBinding())
-        window.decorView.post { setSystemBarStyle(window) }
     }
 
     override fun shouldApplyTranslucentSystemBars(): Boolean {
@@ -31,6 +26,17 @@ abstract class BaseActivity : MaterialActivity() {
 
     override fun computeUserThemeKey(): String {
         return ""
+    }
+
+    override fun onApplyTranslucentSystemBars() {
+        super.onApplyTranslucentSystemBars()
+        window.statusBarColor = Color.TRANSPARENT
+        window.decorView.post {
+            window.navigationBarColor = Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+            }
+        }
     }
 
     override fun onApplyUserThemeResource(theme: Resources.Theme, isDecorView: Boolean) {

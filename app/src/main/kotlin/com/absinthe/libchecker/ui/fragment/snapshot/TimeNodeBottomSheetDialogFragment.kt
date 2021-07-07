@@ -16,6 +16,7 @@ class TimeNodeBottomSheetDialogFragment : BaseBottomSheetViewDialogFragment<Time
     private lateinit var headerView: BottomSheetHeaderView
 
     private var itemClickAction: ((position: Int) -> Unit)? = null
+    private var customTitle: String? = null
 
     override fun initRootView(): TimeNodeBottomSheetView = TimeNodeBottomSheetView(requireContext())
     override fun getHeaderView(): BottomSheetHeaderView = headerView
@@ -31,6 +32,7 @@ class TimeNodeBottomSheetDialogFragment : BaseBottomSheetViewDialogFragment<Time
             title.text = getString(R.string.dialog_title_change_timestamp)
         }
         root.adapter.setHeaderView(headerView)
+        customTitle?.let { headerView.title.text = it }
         itemClickAction?.let { root.adapter.setOnItemClickListener { _, _, position ->
             it(position)
         } }
@@ -38,6 +40,10 @@ class TimeNodeBottomSheetDialogFragment : BaseBottomSheetViewDialogFragment<Time
         arguments?.getParcelableArrayList<TimeStampItem>(EXTRA_TOP_APPS)?.let { topApps ->
             root.adapter.setList(topApps)
         }
+    }
+
+    fun setTitle(title: String) {
+        customTitle = title
     }
 
     fun setOnItemClickListener(action: (position: Int) -> Unit) {

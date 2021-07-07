@@ -12,7 +12,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
-import java.lang.IllegalStateException
 
 
 abstract class BaseBottomSheetViewDialogFragment<T : View> : BottomSheetDialogFragment() {
@@ -65,7 +64,7 @@ abstract class BaseBottomSheetViewDialogFragment<T : View> : BottomSheetDialogFr
         super.onStart()
         dialog?.window?.let {
             it.attributes?.windowAnimations = R.style.DialogAnimation
-            it.findViewById<View>(com.google.android.material.R.id.container).fitsSystemWindows = false
+            it.decorView.rootView.fitsSystemWindows = false
             UiUtils.setSystemBarStyle(it)
         }
         behavior.addBottomSheetCallback(bottomSheetCallback)
