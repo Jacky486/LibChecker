@@ -1,6 +1,7 @@
 package com.absinthe.libchecker.view.applist
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
@@ -71,6 +72,29 @@ class AppItemView(context: Context) : MaterialCardView(context) {
             addView(this)
         }
 
+        var badge: AppCompatImageView? = null
+
+        fun setBadge(res: Int) {
+            setBadge(context.getDrawable(res))
+        }
+
+        fun setBadge(drawable: Drawable?) {
+            if (drawable != null) {
+                if (badge == null) {
+                    badge = AppCompatImageView(context).apply {
+                        layoutParams = LayoutParams(24.dp, 24.dp)
+                        addView(this)
+                    }
+                }
+                badge!!.setImageDrawable(drawable)
+            } else {
+                if (badge != null) {
+                    removeView(badge)
+                    badge = null
+                }
+            }
+        }
+
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             icon.autoMeasure()
@@ -79,6 +103,7 @@ class AppItemView(context: Context) : MaterialCardView(context) {
             packageName.measure(textWidth.toExactlyMeasureSpec(), packageName.defaultHeightMeasureSpec(this))
             versionInfo.measure(textWidth.toExactlyMeasureSpec(), versionInfo.defaultHeightMeasureSpec(this))
             abiInfo.measure(textWidth.toExactlyMeasureSpec(), abiInfo.defaultHeightMeasureSpec(this))
+            badge?.autoMeasure()
             setMeasuredDimension(measuredWidth, paddingTop + appName.measuredHeight + packageName.measuredHeight + versionInfo.measuredHeight + abiInfo.measuredHeight + paddingBottom)
         }
 
@@ -88,6 +113,7 @@ class AppItemView(context: Context) : MaterialCardView(context) {
             packageName.layout(appName.left, appName.bottom)
             versionInfo.layout(appName.left, packageName.bottom)
             abiInfo.layout(appName.left, versionInfo.bottom)
+            badge?.layout(paddingTop, paddingEnd, fromRight = true)
         }
     }
 }

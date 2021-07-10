@@ -21,6 +21,7 @@ import com.absinthe.libchecker.integrations.monkeyking.MonkeyKingManager
 import com.absinthe.libchecker.integrations.monkeyking.ShareCmpInfo
 import com.absinthe.libchecker.recyclerview.diff.LibStringDiffUtil
 import com.absinthe.libchecker.ui.fragment.BaseDetailFragment
+import com.absinthe.libchecker.ui.fragment.EXTRA_TYPE
 import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.fragment.detail.LocatedCount
 import com.absinthe.libchecker.ui.fragment.detail.MODE_SORT_BY_LIB
@@ -32,8 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.core.util.ClipboardUtils
 
-
-const val EXTRA_TYPE = "EXTRA_TYPE"
 
 class ComponentsAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(R.layout.fragment_lib_component) {
 
@@ -58,12 +57,6 @@ class ComponentsAnalysisFragment : BaseDetailFragment<FragmentLibComponentBindin
                 if (componentList.isEmpty()) {
                     emptyView.text.text = getString(R.string.empty_list)
                 } else {
-                    binding.list.addItemDecoration(
-                        DividerItemDecoration(
-                            requireContext(),
-                            DividerItemDecoration.VERTICAL
-                        )
-                    )
                     lifecycleScope.launch(Dispatchers.IO) {
                         val list = mutableListOf<LibStringItemChip>()
                         var chip: LibChip?
@@ -89,6 +82,12 @@ class ComponentsAnalysisFragment : BaseDetailFragment<FragmentLibComponentBindin
                         }
 
                         withContext(Dispatchers.Main) {
+                            binding.list.addItemDecoration(
+                                DividerItemDecoration(
+                                    requireContext(),
+                                    DividerItemDecoration.VERTICAL
+                                )
+                            )
                             adapter.setDiffNewData(list, navigateToComponentTask)
                         }
                     }

@@ -11,6 +11,7 @@ import com.absinthe.libchecker.databinding.FragmentLibComponentBinding
 import com.absinthe.libchecker.recyclerview.diff.LibStringDiffUtil
 import com.absinthe.libchecker.ui.detail.EXTRA_PACKAGE_NAME
 import com.absinthe.libchecker.ui.fragment.BaseDetailFragment
+import com.absinthe.libchecker.ui.fragment.EXTRA_TYPE
 import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.fragment.detail.LocatedCount
 import com.absinthe.libchecker.utils.LCAppUtils
@@ -28,12 +29,6 @@ class DexAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(R.la
         binding.apply {
             list.apply {
                 adapter = this@DexAnalysisFragment.adapter
-                addItemDecoration(
-                    DividerItemDecoration(
-                        requireContext(),
-                        DividerItemDecoration.VERTICAL
-                    )
-                )
             }
         }
 
@@ -42,6 +37,12 @@ class DexAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(R.la
                 if (it.isEmpty()) {
                     emptyView.text.text = getString(R.string.uncharted_territory)
                 } else {
+                    binding.list.addItemDecoration(
+                        DividerItemDecoration(
+                            requireContext(),
+                            DividerItemDecoration.VERTICAL
+                        )
+                    )
                     adapter.setDiffNewData(it.toMutableList(), navigateToComponentTask)
                 }
 

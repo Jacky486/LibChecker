@@ -19,6 +19,7 @@ import com.absinthe.libchecker.R
 import com.absinthe.libchecker.annotation.STATUS_END
 import com.absinthe.libchecker.annotation.STATUS_NOT_START
 import com.absinthe.libchecker.annotation.STATUS_START_INIT
+import com.absinthe.libchecker.bean.DetailExtraBean
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.constant.OnceTag
@@ -30,12 +31,14 @@ import com.absinthe.libchecker.extensions.valueUnsafe
 import com.absinthe.libchecker.recyclerview.adapter.AppAdapter
 import com.absinthe.libchecker.recyclerview.diff.AppListDiffUtil
 import com.absinthe.libchecker.ui.detail.AppDetailActivity
+import com.absinthe.libchecker.ui.detail.EXTRA_DETAIL_BEAN
 import com.absinthe.libchecker.ui.detail.EXTRA_PACKAGE_NAME
 import com.absinthe.libchecker.ui.fragment.BaseListControllerFragment
 import com.absinthe.libchecker.ui.main.MainActivity
 import com.absinthe.libchecker.utils.SPUtils
 import com.absinthe.libchecker.utils.Toasty
 import com.absinthe.libchecker.utils.doOnMainThreadIdle
+import com.absinthe.libchecker.utils.harmony.HarmonyOsUtil
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.analytics.EventProperties
@@ -70,7 +73,9 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
 
                 val intent = Intent(requireActivity(), AppDetailActivity::class.java).apply {
                     putExtras(Bundle().apply {
-                        putString(EXTRA_PACKAGE_NAME, mAdapter.getItem(position).packageName)
+                        val item = mAdapter.getItem(position)
+                        putString(EXTRA_PACKAGE_NAME, item.packageName)
+                        putParcelable(EXTRA_DETAIL_BEAN, DetailExtraBean(item.isSplitApk, item.isKotlinUsed, item.variant))
                     })
                 }
                 startActivity(intent)
@@ -275,10 +280,12 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
                         Once.markDone(OnceTag.FIRST_LAUNCH)
                     }
                 } else if (status == STATUS_NOT_START) {
-                    if (!Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.SHOULD_RELOAD_APP_LIST)) {
+                    if ((HarmonyOsUtil.isHarmonyOs() && !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.HARMONY_FIRST_INIT))
+                        || !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.SHOULD_RELOAD_APP_LIST)) {
                         flip(VF_INIT)
                         initItems()
                         Once.markDone(OnceTag.SHOULD_RELOAD_APP_LIST)
+                        Once.markDone(OnceTag.HARMONY_FIRST_INIT)
                     }
                 }
             })
