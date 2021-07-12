@@ -7,6 +7,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.MutableLiveData
 import com.absinthe.libchecker.BuildConfig
 import com.absinthe.libchecker.LibCheckerApp
+import com.absinthe.libchecker.annotation.LibType
 import com.absinthe.libchecker.annotation.NATIVE
 import com.absinthe.libchecker.ui.fragment.detail.MODE_SORT_BY_SIZE
 import com.absinthe.libchecker.utils.LCAppUtils
@@ -41,6 +42,7 @@ object GlobalValues {
             getPreferences().edit { putInt(Constants.PREF_LOCAL_RULES_VERSION, value) }
         }
 
+    @LibType
     var currentLibRefType: Int = NATIVE
         get() = getPreferences().getInt(Constants.CURRENT_LIB_REF_TYPE, NATIVE)
         set(value) {
@@ -48,7 +50,7 @@ object GlobalValues {
             getPreferences().edit { putInt(Constants.CURRENT_LIB_REF_TYPE, value) }
         }
 
-    val shouldRequestChange: MutableLiveData<Boolean> = MutableLiveData(true)
+    val shouldRequestChange: MutableLiveData<Boolean> = MutableLiveData(false)
 
     val isShowSystemApps: MutableLiveData<Boolean> =
         MutableLiveData(getPreferences().getBoolean(Constants.PREF_SHOW_SYSTEM_APPS, false))

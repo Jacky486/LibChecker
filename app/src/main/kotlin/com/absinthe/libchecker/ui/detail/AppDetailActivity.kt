@@ -22,7 +22,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import coil.load
-import com.absinthe.libchecker.ManifestReader
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.annotation.*
 import com.absinthe.libchecker.bean.DetailExtraBean
@@ -39,6 +38,8 @@ import com.absinthe.libchecker.ui.main.EXTRA_REF_NAME
 import com.absinthe.libchecker.ui.main.EXTRA_REF_TYPE
 import com.absinthe.libchecker.utils.PackageUtils
 import com.absinthe.libchecker.utils.harmony.ApplicationDelegate
+import com.absinthe.libchecker.utils.manifest.ManifestReader
+import com.absinthe.libchecker.utils.unsafeLazy
 import com.absinthe.libchecker.view.detail.CenterAlignImageSpan
 import com.absinthe.libchecker.viewmodel.DetailViewModel
 import com.google.android.material.tabs.TabLayout
@@ -58,12 +59,12 @@ const val EXTRA_DETAIL_BEAN = "EXTRA_DETAIL_BEAN"
 class AppDetailActivity : CheckPackageOnResumingActivity(), IDetailContainer {
 
     private lateinit var binding: ActivityAppDetailBinding
-    private val pkgName by lazy { intent.getStringExtra(EXTRA_PACKAGE_NAME) }
-    private val refName by lazy { intent.getStringExtra(EXTRA_REF_NAME) }
-    private val refType by lazy { intent.getIntExtra(EXTRA_REF_TYPE, ALL) }
-    private val extraBean by lazy { intent.getParcelableExtra(EXTRA_DETAIL_BEAN) as? DetailExtraBean }
-    private val viewModel by viewModels<DetailViewModel>()
-    private val bundleManager by lazy { ApplicationDelegate(this).iBundleManager }
+    private val pkgName by unsafeLazy { intent.getStringExtra(EXTRA_PACKAGE_NAME) }
+    private val refName by unsafeLazy { intent.getStringExtra(EXTRA_REF_NAME) }
+    private val refType by unsafeLazy { intent.getIntExtra(EXTRA_REF_TYPE, ALL) }
+    private val extraBean by unsafeLazy { intent.getParcelableExtra(EXTRA_DETAIL_BEAN) as? DetailExtraBean }
+    private val bundleManager by unsafeLazy { ApplicationDelegate(this).iBundleManager }
+    private val viewModel: DetailViewModel by viewModels()
 
     private var isHarmonyMode = false
 
@@ -107,17 +108,17 @@ class AppDetailActivity : CheckPackageOnResumingActivity(), IDetailContainer {
         }
 
         pkgName?.let { packageName ->
-            val packageInfo = PackageUtils.getPackageInfo(packageName)
             viewModel.packageName = packageName
-            supportActionBar?.apply {
-                title = try {
-                    packageInfo.applicationInfo.loadLabel(packageManager).toString()
-                } catch (e: PackageManager.NameNotFoundException) {
-                    getString(R.string.detail_label)
-                }
-            }
             binding.apply {
                 try {
+                    val packageInfo = PackageUtils.getPackageInfo(packageName)
+                    supportActionBar?.apply {
+                        title = try {
+                            packageInfo.applicationInfo.loadLabel(packageManager).toString()
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            getString(R.string.detail_label)
+                        }
+                    }
                     ivAppIcon.apply {
                         val appIconLoader = AppIconLoader(resources.getDimensionPixelSize(R.dimen.lib_detail_icon_size), false, this@AppDetailActivity)
                         load(appIconLoader.loadIcon(packageInfo.applicationInfo))
@@ -316,9 +317,13 @@ class AppDetailActivity : CheckPackageOnResumingActivity(), IDetailContainer {
                     getText(R.string.ref_category_dex)
                 )
             }
-            if (PackageUtils.getStaticLibs(packageInfo).isNotEmpty()) {
-                types.add(1, STATIC)
-                tabTitles.add(1, getText(R.string.ref_category_static))
+            try {
+                if (PackageUtils.getStaticLibs(PackageUtils.getPackageInfo(packageName)).isNotEmpty()) {
+                    types.add(1, STATIC)
+                    tabTitles.add(1, getText(R.string.ref_category_static))
+                }
+            } catch (e: PackageManager.NameNotFoundException) {
+                Timber.e(e)
             }
 
             binding.viewpager.apply {
@@ -328,7 +333,7 @@ class AppDetailActivity : CheckPackageOnResumingActivity(), IDetailContainer {
                     }
 
                     override fun createFragment(position: Int): Fragment {
-                        return when (val type = types.indexOf(position)) {
+                        return when (val type = types[position]) {
                             NATIVE -> NativeAnalysisFragment.newInstance(packageName, NATIVE)
                             STATIC -> StaticAnalysisFragment.newInstance(packageName, STATIC)
                             DEX -> DexAnalysisFragment.newInstance(packageName, DEX)

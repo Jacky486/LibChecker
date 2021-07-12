@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.get
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.absinthe.libchecker.BuildConfig
 import com.absinthe.libchecker.R
@@ -22,13 +23,16 @@ import com.absinthe.libchecker.ui.fragment.BaseListControllerFragment
 import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.main.*
 import com.absinthe.libchecker.utils.LCAppUtils
-import com.absinthe.libchecker.utils.Toasty
 import com.absinthe.libchecker.utils.doOnMainThreadIdle
+import com.absinthe.libchecker.utils.showToast
 import com.absinthe.libchecker.view.detail.EmptyListView
 import com.absinthe.libchecker.view.statistics.LibReferenceItemView
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.analytics.EventProperties
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import rikka.widget.borderview.BorderView
 
@@ -129,13 +133,13 @@ class LibReferenceFragment : BaseListControllerFragment<FragmentLibReferenceBind
             homeViewModel.refreshRef()
         })
 
-        AppItemRepository.allApplicationInfoItems.observe(viewLifecycleOwner, {
-            AppItemRepository.shouldRefreshAppList = true
-
-            if (adapter.data.isEmpty()) {
-                computeRef()
+        lifecycleScope.launch {
+            if (adapter.data.isEmpty() && AppItemRepository.getApplicationInfoItems().isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    computeRef()
+                }
             }
-        })
+        }
     }
 
     override fun onPause() {
@@ -257,7 +261,7 @@ class LibReferenceFragment : BaseListControllerFragment<FragmentLibReferenceBind
             })
 
             if (newText.equals("Easter Egg", true)) {
-                Toasty.show(requireContext(), "🥚")
+                context?.showToast("🥚")
                 Analytics.trackEvent(Constants.Event.EASTER_EGG, EventProperties().set("EASTER_EGG", "Lib Reference Search"))
             }
         }

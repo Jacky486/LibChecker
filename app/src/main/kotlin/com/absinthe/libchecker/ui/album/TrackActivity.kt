@@ -17,6 +17,7 @@ import com.absinthe.libchecker.database.entity.TrackItem
 import com.absinthe.libchecker.databinding.ActivityTrackBinding
 import com.absinthe.libchecker.recyclerview.adapter.TrackAdapter
 import com.absinthe.libchecker.recyclerview.diff.TrackListDiff
+import com.absinthe.libchecker.utils.unsafeLazy
 import com.absinthe.libchecker.view.detail.EmptyListView
 import com.absinthe.libchecker.view.snapshot.TrackItemView
 import com.absinthe.libchecker.view.snapshot.TrackLoadingView
@@ -30,7 +31,7 @@ class TrackActivity : BaseActivity(), SearchView.OnQueryTextListener {
 
     private lateinit var binding: ActivityTrackBinding
     private val repository = Repositories.lcRepository
-    private val adapter by lazy { TrackAdapter(lifecycleScope) }
+    private val adapter by unsafeLazy { TrackAdapter(lifecycleScope) }
     private val list = mutableListOf<TrackListItem>()
     private var menu: Menu? = null
     private var isListReady = false
@@ -89,40 +90,38 @@ class TrackActivity : BaseActivity(), SearchView.OnQueryTextListener {
             setEmptyView(TrackLoadingView(this@TrackActivity))
         }
 
-        AppItemRepository.allApplicationInfoItems.observe(this, { appList ->
-            lifecycleScope.launch(Dispatchers.IO) {
-                val trackedList = repository.getTrackItems()
-                list.addAll(appList
-                    .asSequence()
-                    .map {
-                        TrackListItem(
-                            label = it.loadLabel(packageManager).toString(),
-                            packageName = it.packageName,
-                            switchState = trackedList.any { trackItem -> trackItem.packageName == it.packageName }
-                        )
-                    }
-                    .sortedByDescending { it.switchState }
-                    .toList()
-                )
-
-                withContext(Dispatchers.Main) {
-                    adapter.setList(list)
-                    menu?.findItem(R.id.search)?.isVisible = true
-                    isListReady = true
-                    adapter.setEmptyView(EmptyListView(this@TrackActivity).apply {
-                        layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT).also {
-                            it.gravity = Gravity.CENTER
-                        }
-                    })
+        lifecycleScope.launch(Dispatchers.IO) {
+            val appList = AppItemRepository.getApplicationInfoItems()
+            val trackedList = repository.getTrackItems()
+            list.addAll(appList
+                .asSequence()
+                .map {
+                    TrackListItem(
+                        label = it.loadLabel(packageManager).toString(),
+                        packageName = it.packageName,
+                        switchState = trackedList.any { trackItem -> trackItem.packageName == it.packageName }
+                    )
                 }
+                .sortedByDescending { it.switchState }
+                .toList()
+            )
+
+            withContext(Dispatchers.Main) {
+                adapter.setList(list)
+                menu?.findItem(R.id.search)?.isVisible = true
+                isListReady = true
+                adapter.setEmptyView(EmptyListView(this@TrackActivity).apply {
+                    layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT).also {
+                        it.gravity = Gravity.CENTER
+                    }
+                })
             }
-        })
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         adapter.release()
-        AppItemRepository.allApplicationInfoItems.removeObservers(this)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

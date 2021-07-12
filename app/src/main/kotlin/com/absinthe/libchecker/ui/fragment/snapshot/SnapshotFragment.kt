@@ -21,6 +21,7 @@ import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.database.AppItemRepository
 import com.absinthe.libchecker.databinding.FragmentSnapshotBinding
+import com.absinthe.libchecker.extensions.addPaddingBottom
 import com.absinthe.libchecker.extensions.addPaddingTop
 import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.HorizontalSpacesItemDecoration
@@ -35,6 +36,7 @@ import com.absinthe.libchecker.ui.fragment.BaseListControllerFragment
 import com.absinthe.libchecker.ui.main.MainActivity
 import com.absinthe.libchecker.ui.snapshot.AlbumActivity
 import com.absinthe.libchecker.utils.doOnMainThreadIdle
+import com.absinthe.libchecker.utils.unsafeLazy
 import com.absinthe.libchecker.view.snapshot.SnapshotDashboardView
 import com.absinthe.libchecker.view.snapshot.SnapshotEmptyView
 import com.absinthe.libchecker.viewmodel.*
@@ -53,12 +55,12 @@ const val VF_LIST = 1
 class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(R.layout.fragment_snapshot) {
 
     private val viewModel by activityViewModels<SnapshotViewModel>()
-    private val adapter by lazy { SnapshotAdapter(lifecycleScope) }
+    private val adapter by unsafeLazy { SnapshotAdapter(lifecycleScope) }
     private var isSnapshotDatabaseItemsReady = false
-    private var isApplicationInfoItemsReady = false
     private var dropPrevious = false
     private var shouldCompare = true
     private var isShooting = false
+    private var hasAddedListBottomPadding = false
 
     private var shootBinder: IShootService? = null
     private val shootListener = object : OnShootListener.Stub() {
@@ -179,14 +181,6 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(R.l
                     BorderView.OnBorderVisibilityChangedListener { top: Boolean, _: Boolean, _: Boolean, _: Boolean ->
                         (requireActivity() as BaseActivity).appBar?.setRaised(!top)
                     }
-                addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                        super.onScrollStateChanged(recyclerView, newState)
-                        if (newState == RecyclerView.SCROLL_STATE_SETTLING) {
-                            //Todo
-                        }
-                    }
-                })
 
                 if (itemDecorationCount == 0) {
                     addItemDecoration(
@@ -215,16 +209,7 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(R.l
             })
             allSnapshots.observe(viewLifecycleOwner, {
                 if (shouldCompare) {
-                    viewModel.timestamp.value = GlobalValues.snapshotTimestamp
-                    isSnapshotDatabaseItemsReady = true
-
-                    computeSnapshotAppCount(GlobalValues.snapshotTimestamp)
-
-                    if (isApplicationInfoItemsReady) {
-                        compareDiff(GlobalValues.snapshotTimestamp)
-                        isSnapshotDatabaseItemsReady = false
-                    }
-
+                    compareDiff()
                 }
             })
             snapshotAppsCount.observe(viewLifecycleOwner, {
@@ -232,18 +217,21 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(R.l
                     dashboard.container.tvSnapshotAppsCountText.text = it.toString()
                 }
             })
-            AppItemRepository.allApplicationInfoItems.observe(viewLifecycleOwner, {
-                isApplicationInfoItemsReady = true
-                AppItemRepository.shouldRefreshAppList = true
-
-                if (isSnapshotDatabaseItemsReady) {
-                    compareDiff(GlobalValues.snapshotTimestamp)
-                    isApplicationInfoItemsReady = false
-                }
-            })
             snapshotDiffItems.observe(
                 viewLifecycleOwner, { list ->
-                    adapter.setDiffNewData(list.sortedByDescending { it.updateTime }.toMutableList())
+                    adapter.setDiffNewData(list.sortedByDescending { it.updateTime }.toMutableList()) {
+                        if (!binding.list.canScrollVertically(1)) {
+                            if (!hasAddedListBottomPadding) {
+                                binding.list.addPaddingBottom(100.dp)
+                                hasAddedListBottomPadding = true
+                            }
+                        } else {
+                            if (hasAddedListBottomPadding) {
+                                binding.list.addPaddingBottom((-100).dp)
+                                hasAddedListBottomPadding = false
+                            }
+                        }
+                    }
                     flip(VF_LIST)
 
                     lifecycleScope.launch(Dispatchers.IO) {
@@ -359,10 +347,8 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(R.l
 
         viewModel.computeSnapshotAppCount(GlobalValues.snapshotTimestamp)
 
-        if (isApplicationInfoItemsReady) {
-            viewModel.compareDiff(GlobalValues.snapshotTimestamp)
-            isSnapshotDatabaseItemsReady = false
-        }
+        viewModel.compareDiff(GlobalValues.snapshotTimestamp)
+        isSnapshotDatabaseItemsReady = false
     }
 
     private fun getSuitableLayoutManager(): RecyclerView.LayoutManager {

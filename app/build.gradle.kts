@@ -17,7 +17,7 @@ android {
     buildToolsVersion = "30.0.3"
 
     val gitCommitId = "git rev-parse --short HEAD".exec()
-    val baseVersionName = "2.1.0"
+    val baseVersionName = "2.1.1"
     val verName = "${baseVersionName}.${gitCommitId}"
     val verCode = "git rev-list --count HEAD".exec().toInt()
 
@@ -64,6 +64,8 @@ android {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn", "-XXLanguage:+InlineClasses")
     }
+
+    sourceSets["main"].java.srcDirs("src/main/kotlin")
 
     packagingOptions.resources.excludes += setOf(
         "META-INF/**",
@@ -130,7 +132,7 @@ val protocVersion by extra("3.17.3")
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     compileOnly(fileTree("ohos"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1")
 
     implementation("com.github.zhaobozhen.libraries:me:1.0.2")
     implementation("com.github.zhaobozhen.libraries:utils:1.0.2")

@@ -16,9 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.absinthe.libchecker.R
-import com.absinthe.libchecker.annotation.STATUS_END
-import com.absinthe.libchecker.annotation.STATUS_NOT_START
-import com.absinthe.libchecker.annotation.STATUS_START_INIT
+import com.absinthe.libchecker.annotation.*
 import com.absinthe.libchecker.bean.DetailExtraBean
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
@@ -26,6 +24,7 @@ import com.absinthe.libchecker.constant.OnceTag
 import com.absinthe.libchecker.database.AppItemRepository
 import com.absinthe.libchecker.database.entity.LCItem
 import com.absinthe.libchecker.databinding.FragmentAppListBinding
+import com.absinthe.libchecker.extensions.addPaddingTop
 import com.absinthe.libchecker.extensions.tintHighlightText
 import com.absinthe.libchecker.extensions.valueUnsafe
 import com.absinthe.libchecker.recyclerview.adapter.AppAdapter
@@ -35,16 +34,14 @@ import com.absinthe.libchecker.ui.detail.EXTRA_DETAIL_BEAN
 import com.absinthe.libchecker.ui.detail.EXTRA_PACKAGE_NAME
 import com.absinthe.libchecker.ui.fragment.BaseListControllerFragment
 import com.absinthe.libchecker.ui.main.MainActivity
-import com.absinthe.libchecker.utils.SPUtils
-import com.absinthe.libchecker.utils.Toasty
-import com.absinthe.libchecker.utils.doOnMainThreadIdle
+import com.absinthe.libchecker.utils.*
 import com.absinthe.libchecker.utils.harmony.HarmonyOsUtil
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
+import com.absinthe.libraries.utils.utils.UiUtils
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.analytics.EventProperties
 import jonathanfinerty.once.Once
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
-import rikka.recyclerview.fixEdgeEffect
 import rikka.widget.borderview.BorderView
 import timber.log.Timber
 
@@ -54,7 +51,7 @@ const val VF_INIT = 2
 
 class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.layout.fragment_app_list), SearchView.OnQueryTextListener {
 
-    private val mAdapter by lazy { AppAdapter(lifecycleScope) }
+    private val mAdapter by unsafeLazy { AppAdapter(lifecycleScope) }
     private var isFirstLaunch = !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.FIRST_LAUNCH)
     private var popup: PopupMenu? = null
 
@@ -95,7 +92,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
                     }
                 setHasFixedSize(true)
                 FastScrollerBuilder(this).useMd2Style().build()
-                fixEdgeEffect()
+                addPaddingTop(UiUtils.getStatusBarHeight())
             }
             vfContainer.apply {
                 setInAnimation(activity, R.anim.anim_fade_in)
@@ -109,12 +106,10 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
     override fun onResume() {
         super.onResume()
 
-        if (!isFirstLaunch && isListReady) {
-            if (AppItemRepository.shouldRefreshAppList) {
-                homeViewModel.dbItems.value?.let {
-                    updateItems(it)
-                    AppItemRepository.shouldRefreshAppList = false
-                }
+        if (!isFirstLaunch && isListReady && AppItemRepository.shouldRefreshAppList) {
+            homeViewModel.dbItems.value?.let {
+                updateItems(it, false)
+                AppItemRepository.shouldRefreshAppList = false
             }
         }
     }
@@ -165,7 +160,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
                 it.label.contains(newText, ignoreCase = true) ||
                         it.packageName.contains(newText, ignoreCase = true)
             }.toMutableList()
-            
+
             if (HarmonyOsUtil.isHarmonyOs() && newText.contains("Harmony", true)) {
                 filter.addAll(allDatabaseItems.filter { it.variant == Constants.VARIANT_HAP })
             }
@@ -202,16 +197,18 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
 
             when {
                 newText.equals("Easter Egg", true) -> {
-                    Toasty.show(requireContext(), "🥚")
+                    context?.showToast("🥚")
                     Analytics.trackEvent(Constants.Event.EASTER_EGG, EventProperties().set("EASTER_EGG", "AppList Search"))
                 }
                 newText == Constants.COMMAND_DEBUG_MODE -> {
                     GlobalValues.debugMode = true
-                    Toasty.show(requireActivity(), "DEBUG MODE")
+                    context?.showToast("DEBUG MODE")
                 }
                 newText == Constants.COMMAND_DEBUG_MODE -> {
                     GlobalValues.debugMode = false
-                    Toasty.show(requireActivity(), "USER MODE")
+                    context?.showToast("USER MODE")
+                }
+                else -> {
                 }
             }
         }
@@ -266,31 +263,38 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
             })
 
             dbItems.observe(viewLifecycleOwner, {
-                if (it.isNullOrEmpty() || appListStatusLiveData.value == STATUS_START_INIT) {
-                    return@observe
+                if (it.isNullOrEmpty()) {
+                    flip(VF_INIT)
+                    initItems()
+                } else if (appListStatusLiveData.value != STATUS_START_INIT
+                    && appListStatusLiveData.value != STATUS_START_REQUEST_CHANGE) {
+                    updateItems(it)
+                    homeViewModel.requestChange()
                 }
-                updateItems(it)
-                homeViewModel.requestChange()
             })
             appListStatusLiveData.observe(viewLifecycleOwner, { status ->
-                Timber.d("appListStatusLiveData update to $status")
-                if (status == STATUS_END) {
-                    dbItems.value?.let { updateItems(it) }
-                    if (!homeViewModel.hasRequestedChange) {
-                        homeViewModel.requestChange()
-                        homeViewModel.hasRequestedChange = true
-                    }
-
-                    if (isFirstLaunch) {
-                        Once.markDone(OnceTag.FIRST_LAUNCH)
-                    }
-                } else if (status == STATUS_NOT_START) {
-                    if ((HarmonyOsUtil.isHarmonyOs() && !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.HARMONY_FIRST_INIT))
-                        || !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.SHOULD_RELOAD_APP_LIST)) {
+                Timber.d("AppList status updates to $status")
+                when(status) {
+                    STATUS_START_INIT -> {
                         flip(VF_INIT)
-                        initItems()
-                        Once.markDone(OnceTag.SHOULD_RELOAD_APP_LIST)
-                        Once.markDone(OnceTag.HARMONY_FIRST_INIT)
+                    }
+                    STATUS_INIT_END -> {
+                        if (isFirstLaunch) {
+                            Once.markDone(OnceTag.FIRST_LAUNCH)
+                        }
+                        requestChange()
+                    }
+                    STATUS_START_REQUEST_CHANGE_END -> {
+                        dbItems.value?.let { updateItems(it) }
+                    }
+                    STATUS_NOT_START -> {
+                        if ((HarmonyOsUtil.isHarmonyOs() && !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.HARMONY_FIRST_INIT))
+                            || (!isFirstLaunch && !Once.beenDone(Once.THIS_APP_INSTALL, OnceTag.SHOULD_RELOAD_APP_LIST))) {
+                            flip(VF_INIT)
+                            initItems()
+                            Once.markDone(OnceTag.SHOULD_RELOAD_APP_LIST)
+                            Once.markDone(OnceTag.HARMONY_FIRST_INIT)
+                        }
                     }
                 }
             })
@@ -335,7 +339,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
         }
     }
 
-    private fun updateItems(newItems: List<LCItem>) {
+    private fun updateItems(newItems: List<LCItem>, needReturnTop: Boolean = true) {
         Timber.d("updateItems")
         val filterList = mutableListOf<LCItem>()
 
@@ -356,7 +360,7 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
         mAdapter.setDiffNewData(filterList) {
             flip(VF_LIST)
 
-            if (shouReturnTopOfList()) {
+            if (shouReturnTopOfList() && needReturnTop) {
                 returnTopOfList()
             }
 
@@ -390,10 +394,6 @@ class AppListFragment : BaseListControllerFragment<FragmentAppListBinding>(R.lay
 
     private fun flip(page: Int) {
         Timber.d("flip to $page")
-        if (homeViewModel.appListStatusLiveData.value == STATUS_START_INIT) {
-            Timber.d("flip encounters STATUS_START_INIT")
-            return
-        }
         if (binding.vfContainer.displayedChild != page) {
             binding.vfContainer.displayedChild = page
         }
