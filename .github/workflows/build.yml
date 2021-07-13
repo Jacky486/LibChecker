@@ -20,7 +20,7 @@ jobs:
           sed -i -e '/isAnonymousAnalyticsEnabled/,+5d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
           sed -i -e '/Analytics.trackEvent/,+3d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/snapshot/SnapshotFragment.kt
           sed -i -e '/Analytics.trackEvent/,+3d' app/src/main/kotlin/com/absinthe/libchecker/ui/detail/SnapshotDetailActivity.kt
-          sed -i -e '/Constants.Event.EASTER_EGG/d; /Renge 10 hits/d' app/src/main/kotlin/com/absinthe/libchecker/ui/about/AboutActivity.kt
+          sed -i -e '/Constants.Event.EASTER_EGG/,+1d; /Renge 10 hits/d' app/src/main/kotlin/com/absinthe/libchecker/ui/about/AboutActivity.kt
           sed -i -e '/Analytics.trackEvent/,+5d' app/src/main/kotlin/com/absinthe/libchecker/ui/fragment/statistics/LibReferenceFragment.kt
           sed -i -e '/microsoft/d; /AppCenter/d; /Analytics/d; /Crashes/d' app/src/main/kotlin/com/absinthe/libchecker/LibCheckerApp.kt
           sed -i -e '/microsoft/d; /EventProperties/d; /Analytics/d' app/src/main/kotlin/com/absinthe/libchecker/ui/about/AboutActivity.kt
