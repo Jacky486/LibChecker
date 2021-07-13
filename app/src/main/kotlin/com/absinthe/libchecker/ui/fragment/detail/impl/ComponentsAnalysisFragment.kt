@@ -1,6 +1,5 @@
 package com.absinthe.libchecker.ui.fragment.detail.impl
 
-import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
@@ -10,9 +9,9 @@ import com.absinthe.libchecker.R
 import com.absinthe.libchecker.annotation.ACTIVITY
 import com.absinthe.libchecker.annotation.LibType
 import com.absinthe.libchecker.bean.DISABLED
+import com.absinthe.libchecker.bean.LibChip
 import com.absinthe.libchecker.bean.LibStringItem
 import com.absinthe.libchecker.bean.LibStringItemChip
-import com.absinthe.libchecker.bean.LibChip
 import com.absinthe.libchecker.constant.librarymap.IconResMap
 import com.absinthe.libchecker.database.entity.RuleEntity
 import com.absinthe.libchecker.databinding.FragmentLibComponentBinding
@@ -26,6 +25,7 @@ import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.fragment.detail.LocatedCount
 import com.absinthe.libchecker.ui.fragment.detail.MODE_SORT_BY_LIB
 import com.absinthe.libchecker.utils.LCAppUtils
+import com.absinthe.libchecker.utils.putArguments
 import com.absinthe.libchecker.utils.showToast
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import kotlinx.coroutines.Dispatchers
@@ -66,12 +66,21 @@ class ComponentsAnalysisFragment : BaseDetailFragment<FragmentLibComponentBindin
                             rule = LCAppUtils.getRuleWithRegex(item.componentName, adapter.type)
                             chip = null
                             if (rule != null) {
-                                chip = LibChip(iconRes = IconResMap.getIconRes(rule.iconIndex), name = rule.label, regexName = rule.regexName)
+                                chip = LibChip(
+                                    iconRes = IconResMap.getIconRes(rule.iconIndex),
+                                    name = rule.label,
+                                    regexName = rule.regexName
+                                )
                             }
-                            if (item.enabled) {
-                                list.add(LibStringItemChip(LibStringItem(item.componentName), chip))
+                            list += if (item.enabled) {
+                                LibStringItemChip(LibStringItem(item.componentName), chip)
                             } else {
-                                list.add(LibStringItemChip(LibStringItem(name = item.componentName, source = DISABLED), chip))
+                                LibStringItemChip(
+                                    LibStringItem(
+                                        name = item.componentName,
+                                        source = DISABLED
+                                    ), chip
+                                )
                             }
                         }
 
@@ -182,12 +191,9 @@ class ComponentsAnalysisFragment : BaseDetailFragment<FragmentLibComponentBindin
 
     companion object {
         fun newInstance(@LibType type: Int): ComponentsAnalysisFragment {
-            return ComponentsAnalysisFragment()
-                .apply {
-                    arguments = Bundle().apply {
-                        putInt(EXTRA_TYPE, type)
-                    }
-                }
+            return ComponentsAnalysisFragment().putArguments(
+                EXTRA_TYPE to type
+            )
         }
     }
 }
