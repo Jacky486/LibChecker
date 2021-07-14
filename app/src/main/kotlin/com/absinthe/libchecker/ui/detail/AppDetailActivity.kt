@@ -30,17 +30,17 @@ import com.absinthe.libchecker.constant.AbilityType
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.databinding.ActivityAppDetailBinding
-import com.absinthe.libchecker.extensions.isOrientationPortrait
-import com.absinthe.libchecker.extensions.setLongClickCopiedToClipboard
 import com.absinthe.libchecker.ui.app.CheckPackageOnResumingActivity
 import com.absinthe.libchecker.ui.fragment.detail.*
 import com.absinthe.libchecker.ui.fragment.detail.impl.*
 import com.absinthe.libchecker.ui.main.EXTRA_REF_NAME
 import com.absinthe.libchecker.ui.main.EXTRA_REF_TYPE
 import com.absinthe.libchecker.utils.PackageUtils
+import com.absinthe.libchecker.utils.extensions.isOrientationPortrait
+import com.absinthe.libchecker.utils.extensions.setLongClickCopiedToClipboard
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import com.absinthe.libchecker.utils.harmony.ApplicationDelegate
 import com.absinthe.libchecker.utils.manifest.ManifestReader
-import com.absinthe.libchecker.utils.unsafeLazy
 import com.absinthe.libchecker.view.detail.CenterAlignImageSpan
 import com.absinthe.libchecker.viewmodel.DetailViewModel
 import com.google.android.material.tabs.TabLayout
@@ -416,12 +416,12 @@ class AppDetailActivity : CheckPackageOnResumingActivity(), IDetailContainer {
                 }
             mediator.attach()
 
-            viewModel.itemsCountLiveData.observe(this, {
+            viewModel.itemsCountLiveData.observe(this) {
                 if (detailFragmentManager.currentItemsCount != it.count && types[binding.tabLayout.selectedTabPosition] == it.locate) {
                     binding.tsComponentCount.setText(it.count.toString())
                     detailFragmentManager.currentItemsCount = it.count
                 }
-            })
+            }
 
             if (!isHarmonyMode) {
                 viewModel.initComponentsData(packageName)

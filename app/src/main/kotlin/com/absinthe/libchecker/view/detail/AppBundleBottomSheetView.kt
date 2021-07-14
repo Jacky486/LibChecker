@@ -5,10 +5,10 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.VerticalSpacesItemDecoration
 import com.absinthe.libchecker.recyclerview.adapter.detail.AppBundleAdapter
-import com.absinthe.libchecker.utils.unsafeLazy
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 
 class AppBundleBottomSheetView(context: Context) : LinearLayout(context) {
 

@@ -14,7 +14,6 @@ import com.absinthe.libchecker.*
 import com.absinthe.libchecker.annotation.*
 import com.absinthe.libchecker.bean.LibStringItem
 import com.absinthe.libchecker.bean.StatefulComponent
-import com.absinthe.libchecker.compat.VersionCompat
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.Constants.ARMV5
 import com.absinthe.libchecker.constant.Constants.ARMV5_STRING
@@ -157,7 +156,7 @@ object PackageUtils {
      */
     fun getNativeDirLibs(packageInfo: PackageInfo, is32bit: Boolean = false, needStaticLibrary: Boolean = false): List<LibStringItem> {
         val nativePath = packageInfo.applicationInfo.nativeLibraryDir
-        val realNativePath = if (is32bit) {
+        val realNativePath = if (is32bit && nativePath != null) {
             nativePath.substring(0, nativePath.lastIndexOf("/")) + "/arm"
         } else {
             nativePath

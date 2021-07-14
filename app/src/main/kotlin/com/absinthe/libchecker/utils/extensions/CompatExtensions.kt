@@ -1,4 +1,4 @@
-package com.absinthe.libchecker.compat
+package com.absinthe.libchecker.utils.extensions
 
 import android.annotation.SuppressLint
 import androidx.appcompat.widget.TintTypedArray
@@ -9,7 +9,11 @@ import kotlin.contracts.contract
 import kotlin.comparisons.reversed as kotlinReversed
 import kotlin.io.use as kotlinUse
 
-// @see https://youtrack.jetbrains.com/issue/KT-35216
+fun <T> unsafeLazy(initializer: () -> T): Lazy<T> = lazy(LazyThreadSafetyMode.NONE, initializer)
+
+/**
+ * [issue](https://youtrack.jetbrains.com/issue/KT-35216)
+ */
 @OptIn(ExperimentalContracts::class)
 inline fun <T : Closeable?, R> T.use(block: (T) -> R): R {
     contract {

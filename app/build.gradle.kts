@@ -132,7 +132,7 @@ val protocVersion by extra("3.17.3")
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     compileOnly(fileTree("ohos"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1-native-mt")
 
     implementation("com.github.zhaobozhen.libraries:me:1.0.2")
     implementation("com.github.zhaobozhen.libraries:utils:1.0.2")
@@ -173,7 +173,7 @@ dependencies {
     implementation("com.jakewharton.timber:timber:4.7.1")
     implementation("com.jonathanfinerty.once:once:1.3.1")
     implementation("net.dongliu:apk-parser:2.6.10")
-    implementation("io.coil-kt:coil:1.2.2")
+    implementation("io.coil-kt:coil:1.3.0")
     implementation("me.zhanghai.android.fastscroll:library:1.1.7")
     implementation("me.zhanghai.android.appiconloader:appiconloader:1.3.1")
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:2.0")

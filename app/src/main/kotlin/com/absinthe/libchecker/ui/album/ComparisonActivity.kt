@@ -17,17 +17,18 @@ import com.absinthe.libchecker.BaseActivity
 import com.absinthe.libchecker.R
 import com.absinthe.libchecker.databinding.ActivityComparisonBinding
 import com.absinthe.libchecker.databinding.LayoutComparisonDashboardBinding
-import com.absinthe.libchecker.extensions.addPaddingTop
-import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.HorizontalSpacesItemDecoration
 import com.absinthe.libchecker.recyclerview.adapter.snapshot.SnapshotAdapter
 import com.absinthe.libchecker.ui.detail.EXTRA_ENTITY
 import com.absinthe.libchecker.ui.detail.SnapshotDetailActivity
 import com.absinthe.libchecker.ui.fragment.snapshot.TimeNodeBottomSheetDialogFragment
-import com.absinthe.libchecker.utils.unsafeLazy
+import com.absinthe.libchecker.utils.extensions.addPaddingTop
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import com.absinthe.libchecker.view.snapshot.SnapshotEmptyView
 import com.absinthe.libchecker.viewmodel.SnapshotViewModel
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import rikka.widget.borderview.BorderView
 
@@ -75,7 +76,7 @@ class ComparisonActivity : BaseActivity() {
         dashboardBinding.apply {
             infoLeft.horizontalGravity = Gravity.START
             infoLeft.setOnClickListener {
-                lifecycleScope.launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     val timeStampList = viewModel.repository.getTimeStamps()
                     val dialog = TimeNodeBottomSheetDialogFragment
                         .newInstance(ArrayList(timeStampList))
@@ -86,8 +87,7 @@ class ComparisonActivity : BaseActivity() {
                                 infoLeft.tvSnapshotTimestampText.text =
                                     viewModel.getFormatDateString(leftTimeStamp)
                                 lifecycleScope.launch {
-                                    val count =
-                                        viewModel.repository.getSnapshots(leftTimeStamp).size
+                                    val count = viewModel.repository.getSnapshots(leftTimeStamp).size
                                     infoLeft.tvSnapshotAppsCountText.text = count.toString()
                                 }
                                 dismiss()
@@ -98,7 +98,7 @@ class ComparisonActivity : BaseActivity() {
             }
             infoRight.horizontalGravity = Gravity.END
             infoRight.setOnClickListener {
-                lifecycleScope.launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     val timeStampList = viewModel.repository.getTimeStamps()
                     val dialog = TimeNodeBottomSheetDialogFragment
                         .newInstance(ArrayList(timeStampList))
@@ -109,9 +109,7 @@ class ComparisonActivity : BaseActivity() {
                                 infoRight.tvSnapshotTimestampText.text =
                                     viewModel.getFormatDateString(rightTimeStamp)
                                 lifecycleScope.launch {
-                                    val count =
-                                        viewModel.repository.getSnapshots(rightTimeStamp).size
-
+                                    val count = viewModel.repository.getSnapshots(rightTimeStamp).size
                                     infoRight.tvSnapshotAppsCountText.text = count.toString()
                                 }
                                 dismiss()
@@ -203,10 +201,10 @@ class ComparisonActivity : BaseActivity() {
             }
         }
 
-        viewModel.snapshotDiffItems.observe(this, { list ->
+        viewModel.snapshotDiffItems.observe(this) { list ->
             adapter.setList(list.sortedByDescending { it.updateTime })
             flip(VF_LIST)
-        })
+        }
     }
 
     private fun getSuitableLayoutManager(): RecyclerView.LayoutManager {

@@ -14,14 +14,14 @@ import com.absinthe.libchecker.annotation.*
 import com.absinthe.libchecker.bean.DetailExtraBean
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.databinding.ActivityLibReferenceBinding
-import com.absinthe.libchecker.extensions.isOrientationLandscape
-import com.absinthe.libchecker.extensions.paddingTopCompat
 import com.absinthe.libchecker.recyclerview.adapter.AppAdapter
 import com.absinthe.libchecker.ui.detail.AppDetailActivity
 import com.absinthe.libchecker.ui.detail.EXTRA_DETAIL_BEAN
 import com.absinthe.libchecker.ui.detail.EXTRA_PACKAGE_NAME
 import com.absinthe.libchecker.utils.LCAppUtils
-import com.absinthe.libchecker.utils.unsafeLazy
+import com.absinthe.libchecker.utils.extensions.isOrientationLandscape
+import com.absinthe.libchecker.utils.extensions.paddingTopCompat
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import com.absinthe.libchecker.viewmodel.LibReferenceViewModel
 import com.absinthe.libraries.utils.utils.AntiShakeUtils
 import kotlinx.coroutines.launch
@@ -49,9 +49,9 @@ class LibReferenceActivity : BaseActivity() {
 
         refName?.let { name ->
             initView()
-            viewModel.dbItems.observe(this, {
+            viewModel.dbItems.observe(this) {
                 viewModel.setData(name, refType)
-            })
+            }
 
             lifecycleScope.launch {
                 LCAppUtils.getRuleWithRegex(name, refType)?.let {
@@ -128,10 +128,10 @@ class LibReferenceActivity : BaseActivity() {
             }
         }
 
-        viewModel.libRefList.observe(this, {
+        viewModel.libRefList.observe(this) {
             adapter.setList(it)
             binding.vfContainer.displayedChild = 1
-        })
+        }
 
         adapter.setOnItemClickListener { _, view, position ->
             if (AntiShakeUtils.isInvalidClick(view)) {

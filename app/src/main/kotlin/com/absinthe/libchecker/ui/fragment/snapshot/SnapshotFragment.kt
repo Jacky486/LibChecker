@@ -21,9 +21,6 @@ import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.constant.GlobalValues
 import com.absinthe.libchecker.database.AppItemRepository
 import com.absinthe.libchecker.databinding.FragmentSnapshotBinding
-import com.absinthe.libchecker.extensions.addPaddingBottom
-import com.absinthe.libchecker.extensions.addPaddingTop
-import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.HorizontalSpacesItemDecoration
 import com.absinthe.libchecker.recyclerview.adapter.snapshot.SnapshotAdapter
 import com.absinthe.libchecker.recyclerview.diff.SnapshotDiffUtil
@@ -36,7 +33,10 @@ import com.absinthe.libchecker.ui.fragment.BaseListControllerFragment
 import com.absinthe.libchecker.ui.main.MainActivity
 import com.absinthe.libchecker.ui.snapshot.AlbumActivity
 import com.absinthe.libchecker.utils.doOnMainThreadIdle
-import com.absinthe.libchecker.utils.unsafeLazy
+import com.absinthe.libchecker.utils.extensions.addPaddingBottom
+import com.absinthe.libchecker.utils.extensions.addPaddingTop
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import com.absinthe.libchecker.view.snapshot.SnapshotDashboardView
 import com.absinthe.libchecker.view.snapshot.SnapshotEmptyView
 import com.absinthe.libchecker.viewmodel.*
@@ -121,7 +121,7 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(
         dashboard.container.apply {
 
             fun changeTimeNode() {
-                lifecycleScope.launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     val timeStampList = viewModel.repository.getTimeStamps()
                     val dialog = TimeNodeBottomSheetDialogFragment
                         .newInstance(ArrayList(timeStampList))
@@ -129,10 +129,13 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(
                             setOnItemClickListener { position ->
                                 val item = timeStampList[position]
                                 GlobalValues.snapshotTimestamp = item.timestamp
-                                viewModel.timestamp.value = item.timestamp
-                                flip(VF_LOADING)
+                                lifecycleScope.launch(Dispatchers.Main) {
+                                    viewModel.timestamp.value = item.timestamp
+                                    flip(VF_LOADING)
+                                    dismiss()
+                                }
                                 viewModel.compareDiff(item.timestamp, shouldClearDiff = true)
-                                dismiss()
+
                             }
                         }
                     dialog.show(requireActivity().supportFragmentManager, dialog.tag)
@@ -206,7 +209,7 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(
         }
 
         viewModel.apply {
-            timestamp.observe(viewLifecycleOwner, {
+            timestamp.observe(viewLifecycleOwner) {
                 if (it != 0L) {
                     dashboard.container.tvSnapshotTimestampText.text = getFormatDateString(it)
                 } else {
@@ -215,51 +218,49 @@ class SnapshotFragment : BaseListControllerFragment<FragmentSnapshotBinding>(
                     snapshotDiffItems.value = emptyList()
                     flip(VF_LIST)
                 }
-            })
-            allSnapshots.observe(viewLifecycleOwner, {
+            }
+            allSnapshots.observe(viewLifecycleOwner) {
                 if (shouldCompare) {
                     compareDiff()
                 }
-            })
-            snapshotAppsCount.observe(viewLifecycleOwner, {
+            }
+            snapshotAppsCount.observe(viewLifecycleOwner) {
                 if (it != null) {
                     dashboard.container.tvSnapshotAppsCountText.text = it.toString()
                 }
-            })
-            snapshotDiffItems.observe(
-                viewLifecycleOwner, { list ->
-                    adapter.setDiffNewData(list.sortedByDescending { it.updateTime }
-                        .toMutableList()) {
-                        if (!binding.list.canScrollVertically(1)) {
-                            if (!hasAddedListBottomPadding) {
-                                binding.list.addPaddingBottom(100.dp)
-                                hasAddedListBottomPadding = true
-                            }
-                        } else {
-                            if (hasAddedListBottomPadding) {
-                                binding.list.addPaddingBottom((-100).dp)
-                                hasAddedListBottomPadding = false
-                            }
+            }
+            snapshotDiffItems.observe(viewLifecycleOwner) { list ->
+                adapter.setDiffNewData(list.sortedByDescending { it.updateTime }
+                    .toMutableList()) {
+                    if (!binding.list.canScrollVertically(-1)) {
+                        if (!hasAddedListBottomPadding) {
+                            binding.list.addPaddingBottom(20.dp)
+                            hasAddedListBottomPadding = true
+                        }
+                    } else {
+                        if (hasAddedListBottomPadding) {
+                            binding.list.addPaddingBottom((-20).dp)
+                            hasAddedListBottomPadding = false
                         }
                     }
-                    flip(VF_LIST)
-
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        delay(250)
-
-                        doOnMainThreadIdle({
-                            if (this@SnapshotFragment == homeViewModel.controller
-                                && !binding.list.canScrollVertically(-1)
-                            ) {
-                                (requireActivity() as MainActivity).showNavigationView()
-                            }
-                        })
-                    }
                 }
-            )
-            comparingProgressLiveData.observe(viewLifecycleOwner, {
+                flip(VF_LIST)
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    delay(250)
+
+                    doOnMainThreadIdle({
+                        if (this@SnapshotFragment == homeViewModel.controller
+                            && !binding.list.canScrollVertically(-1)
+                        ) {
+                            (requireActivity() as MainActivity).showNavigationView()
+                        }
+                    })
+                }
+            }
+            comparingProgressLiveData.observe(viewLifecycleOwner) {
                 binding.progressIndicator.setProgressCompat(it, it != 1)
-            })
+            }
         }
         homeViewModel.apply {
             packageChangedLiveData.observe(viewLifecycleOwner) {

@@ -16,7 +16,7 @@ import com.absinthe.libchecker.ui.fragment.detail.LibDetailDialogFragment
 import com.absinthe.libchecker.ui.fragment.detail.LocatedCount
 import com.absinthe.libchecker.ui.fragment.detail.MODE_SORT_BY_LIB
 import com.absinthe.libchecker.utils.LCAppUtils
-import com.absinthe.libchecker.utils.putArguments
+import com.absinthe.libchecker.utils.extensions.putArguments
 import com.absinthe.libchecker.utils.showToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,7 +41,7 @@ class AbilityAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(
         }
 
         viewModel.apply {
-            abilitiesMap[adapter.type]?.observe(viewLifecycleOwner, { componentList ->
+            abilitiesMap[adapter.type]?.observe(viewLifecycleOwner) { componentList ->
                 if (componentList.isEmpty()) {
                     emptyView.text.text = getString(R.string.empty_list)
                 } else {
@@ -83,7 +83,7 @@ class AbilityAnalysisFragment : BaseDetailFragment<FragmentLibComponentBinding>(
                     viewModel.itemsCountList[type] = componentList.size
                     isListReady = true
                 }
-            })
+            }
         }
 
         fun openLibDetailDialog(position: Int) {

@@ -23,8 +23,6 @@ import com.absinthe.libchecker.bean.SnapshotDiffItem
 import com.absinthe.libchecker.constant.Constants
 import com.absinthe.libchecker.database.Repositories
 import com.absinthe.libchecker.databinding.ActivitySnapshotDetailBinding
-import com.absinthe.libchecker.extensions.addPaddingTop
-import com.absinthe.libchecker.extensions.dp
 import com.absinthe.libchecker.recyclerview.VerticalSpacesItemDecoration
 import com.absinthe.libchecker.recyclerview.adapter.snapshot.ARROW
 import com.absinthe.libchecker.recyclerview.adapter.snapshot.SnapshotDetailAdapter
@@ -35,7 +33,9 @@ import com.absinthe.libchecker.recyclerview.adapter.snapshot.node.SnapshotTitleN
 import com.absinthe.libchecker.ui.main.EXTRA_REF_NAME
 import com.absinthe.libchecker.ui.main.EXTRA_REF_TYPE
 import com.absinthe.libchecker.utils.PackageUtils
-import com.absinthe.libchecker.utils.unsafeLazy
+import com.absinthe.libchecker.utils.extensions.addPaddingTop
+import com.absinthe.libchecker.utils.extensions.dp
+import com.absinthe.libchecker.utils.extensions.unsafeLazy
 import com.absinthe.libchecker.view.snapshot.SnapshotDetailDeletedView
 import com.absinthe.libchecker.view.snapshot.SnapshotDetailNewInstallView
 import com.absinthe.libchecker.view.snapshot.SnapshotEmptyView
@@ -138,7 +138,7 @@ class SnapshotDetailActivity : BaseActivity() {
             tvTargetApi.text = "API ${getDiffString(entity.targetApiDiff, isNewOrDeleted)}"
         }
 
-        viewModel.snapshotDetailItems.observe(this, { details ->
+        viewModel.snapshotDetailItems.observe(this) { details ->
             val titleList = mutableListOf<SnapshotTitleNode>()
 
             getNodeList(details.filter { it.itemType == NATIVE }).apply {
@@ -199,7 +199,7 @@ class SnapshotDetailActivity : BaseActivity() {
             if (titleList.isNotEmpty()) {
                 adapter.setList(titleList)
             }
-        })
+        }
 
         adapter.setEmptyView(
             when {
